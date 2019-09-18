@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-//https://www.youtube.com/watch?v=IvKynoaD7PA 
+
 
 // Markov data structure represents our markov chain
 type Markov struct {
@@ -20,8 +20,6 @@ type Markov struct {
 	// Mutex
 	mux 		   sync.Mutex
 }
-
-
 
 
 
@@ -47,6 +45,7 @@ func (m *Markov) addState(s string) *string {
 	m.strings = append(m.strings, s)
 	return &m.strings[len(m.strings)-1]
 }
+
 
 // Add edge adds a link between one state and another
 func (m *Markov) addEdge(i string, d *string) {
@@ -78,6 +77,7 @@ func (m *Markov) Generate() []string {
 	// Cut off the final "TERMINAL" text
 	return append(sentence[:len(sentence)-1], ".")
 }
+
 
 // Function to parse input data
 func (m *Markov) Parse(sentence string) {

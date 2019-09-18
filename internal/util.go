@@ -12,7 +12,8 @@ import (
 )
 
 
-// go binary encoder
+
+// go binary encoder, this is used when storing structs within a file
 func ToGOB64(m markov.Markov) string {
     b := bytes.Buffer{}
     e := gob.NewEncoder(&b)
@@ -21,7 +22,9 @@ func ToGOB64(m markov.Markov) string {
     return base64.StdEncoding.EncodeToString(b.Bytes())
 }
 
-// go binary decoder
+
+
+// go binary decoder, this is used when retreiving structs from a file
 func FromGOB64(str string) markov.Markov {
     m := markov.Markov{}
     by, err := base64.StdEncoding.DecodeString(str)
@@ -34,14 +37,15 @@ func FromGOB64(str string) markov.Markov {
     return m
 }
 
+
+
+// Does what it says
 func OpenFileFromStore(dest string) []byte {
 	userDict, _ := os.OpenFile(GetAbsFile(fmt.Sprintf("data/%s.dict", dest)), os.O_RDONLY|os.O_CREATE, 0666)
 	defer userDict.Close()
 	dictBytes, _ := ioutil.ReadAll(userDict)
 	return dictBytes
 }
-
-
 
 
 

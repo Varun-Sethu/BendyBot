@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"fmt"
 	"strings"
-	"json"
 )
 
 
@@ -27,6 +26,7 @@ func validate(input []string, m *discordgo.MessageCreate, inputs int, mentions i
 
 
 
+// function that handles a request from a user to begin the tracking of another user
 func track(input []string, m *discordgo.MessageCreate) string {
 	// Generate and pass user id + determine if the inputs are valid
 	uid := m.Mentions[0].ID
@@ -55,6 +55,33 @@ func track(input []string, m *discordgo.MessageCreate) string {
 
 
 
+// Function that handles a request from a user to end the tracking of another user
+func endtrack(input []string, m *discordgo.MessageCreate) string {
+	uid := m.Mentions[0].ID
+	if !validate(input, m, 1, 1) {
+		return "You have to/can only mention 1 person :(."
+	}
+
+	// This section really just deletes the user from the active_tracking slice
+	tState := tracking.StateInfo.Active_tracking
+	i := 0
+	for q, v := range tState {
+		if v == uid {
+			i = q
+		}
+	}
+	tState = append(tState[:i], tState[i+1:]...)
+
+
+	delete(tracking.CurrentlyTracking, uid)
+	tracking.SaveBotState(uid)	
+
+	return "Successfully ended tracking for: " + uid
+}
+
+
+
+// Function that handles the request to generate a sentence from another user's markov chain
 func generate(input []string, m *discordgo.MessageCreate) string {
 	uid := m.Mentions[0].ID
 	if !validate(input, m, 1, 1) {
@@ -79,42 +106,8 @@ func generate(input []string, m *discordgo.MessageCreate) string {
 }
 
 
-func endtrack(input []string, m *discordgo.MessageCreate) string {
-	uid := m.Mentions[0].ID
-	if !validate(input, m, 1, 1) {
-		return "You have to/can only mention 1 person :(."
-	}
-	tState := *tracking.StateInfo.Active_tracking
 
-	// Delete from active_tracking
-	i := 0
-	for q, v := range tState {
-		if v == uid {
-			i = q
-		}
-	}
-	tState = append(tState[:i], tState[i+1:]...)
-
-
-	// Read from the currently tracking map and save the data
-	dataString := internal.ToGOB64(tracking.CurrentlyTracking[uid])
-	userDict, _ := os.Open(internal.GetAbsFile(fmt.Sprintf("data/%s.dict", uid)))
-	defer userDict.Close()
-	ioutil.WriteFile(userDict.Name(), []byte(dataString), 0644)
-	delete(tracking.CurrentlyTracking, uid)
-
-
-	// save the bot state as well
-	botStateJson, _ := json.Marshal(tracking.StateInfo)
-	f, _ := os.Open(internal.GetAbsFile("stateinfo.json"))
-	defer f.Close()
-	ioutil.WriteFile(f.Name(), botStateJson)
-
-	return "Successfully ended tracking for: " + uid
-}
-
-
-
+// Function that handles the request from a user to change the channel that is actively being tracked from
 func setChannel(input []string, m *discordgo.MessageCreate) string {
 	if !validate(input, m, 1, 0) {
 		return "Invalid format >:("

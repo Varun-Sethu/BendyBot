@@ -9,9 +9,27 @@ import (
 
 
 
+// Does what it says :P
+func HandleIncomingCommand(m *discordgo.MessageCreate) {
+	// Regex to distinguish a command
+	commandRegex, _ := regexp.Compile(`^(yo bendy)(\s.+)`)
+	command := commandRegex.FindAllStringSubmatch(m.Content, 2)[0][2]
+
+	// Split the command up into components for parsing
+	tokens, err := parse(m, command)
+	if err != nil {
+		s.ChannelMessageSend(m.ChannelID, err.Error())
+	} else {
+		s.ChannelMessageSend(m.ChannelID, interpret(tokens, m))
+	}
+}
+
+
+
+
 
 // function to parse the given input and turn it into a series of tokens
-func Parse(m *discordgo.MessageCreate, command string) ([]string, error) {
+func parse(m *discordgo.MessageCreate, command string) ([]string, error) {
 	// Split the input into a series of tokens separated by whitespace
 	construction := regexp.MustCompile(`[\s]+`).Split(command[1:], -1)
 	// all the possible commands
@@ -35,7 +53,9 @@ func Parse(m *discordgo.MessageCreate, command string) ([]string, error) {
 }
 
 
-func Interpret(input []string, m *discordgo.MessageCreate) string {
+
+// Interprets and incoming command at matches the command string to the corresponding function
+func interpret(input []string, m *discordgo.MessageCreate) string {
 	switch input[0] {
 	case "track":
 		return track(input, m)
