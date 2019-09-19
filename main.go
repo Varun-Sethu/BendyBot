@@ -4,10 +4,9 @@ import(
 	"bendy-bot/internal"
 	_"bendy-bot/internal/markov"
 	"bendy-bot/internal/client"
-	"bendy-bot/internal/tracking"
+	"bendy-bot/internal/bot"
 	"github.com/bwmarrin/discordgo"
 	"regexp"
-	"fmt"
 )
 
 
@@ -16,7 +15,7 @@ var botID string
 func main() {
 	// Authenticate the client
 	authcode := internal.OpenFileFromStore("autcode.txt")
-	discord, err := discordgo.New("Bot " + authcode)
+	discord, err := discordgo.New("Bot " + string(authcode))
 	if err != nil {
 		panic(err)
 	}
@@ -45,10 +44,10 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// This is what deals with our incoming commands
 	switch commandRegex.MatchString(m.Content) {
 	case true:
-		client.HandleIncomingCommand(m)
+		client.HandleIncomingCommand(s, m)
 		break;
 	case false:
-		tracking.HandleIncomingMessage(m)	
+		bot.HandleIncomingMessage(m)	
 		break;
 	}
 }

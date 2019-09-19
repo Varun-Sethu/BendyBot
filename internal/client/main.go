@@ -10,7 +10,7 @@ import (
 
 
 // Does what it says :P
-func HandleIncomingCommand(m *discordgo.MessageCreate) {
+func HandleIncomingCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// Regex to distinguish a command
 	commandRegex, _ := regexp.Compile(`^(yo bendy)(\s.+)`)
 	command := commandRegex.FindAllStringSubmatch(m.Content, 2)[0][2]

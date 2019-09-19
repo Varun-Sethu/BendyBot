@@ -1,14 +1,8 @@
 package client
 
 import (
-	"bendy-bot/internal/markov"
-	"bendy-bot/internal/tracking"
-	"bendy-bot/internal"
+	"bendy-bot/internal/bot"
 	"github.com/bwmarrin/discordgo"
-	"os"
-	"io/ioutil"
-	"fmt"
-	"strings"
 )
 
 
@@ -33,21 +27,10 @@ func track(input []string, m *discordgo.MessageCreate) string {
 	if !validate(input, m, 1, 1) {
 		return "You have to/can only mention 1 person :(."
 	}
-	if _, ok := tracking.CurrentlyTracking[uid]; ok {
-		return "Stop being stupid Botond! User is already being tracked >:("
-	}
-
-	// Update the tracking state and read from their storage file
-	tracking.StateInfo.Active_tracking = append(tracking.StateInfo.Active_tracking, uid)
-	dictBytes := internal.OpenFileFromStore(uid)
-
-	if len(dictBytes) == 0 {
-		// Build a new markov chain if nothing exists in storage for this user
-		tracking.CurrentlyTracking[uid] = markov.Build()
-	} else {
-		// Interpret and parse their data
-		data := internal.FromGOB64(string(dictBytes))
-		tracking.CurrentlyTracking[uid] = data
+	
+	err := bot.BeginTrackingUser(uid)
+	if err != nil {
+		return err.Error()
 	}
 
 	return "Yay! I'm now tracking: " + uid
@@ -62,19 +45,7 @@ func endtrack(input []string, m *discordgo.MessageCreate) string {
 		return "You have to/can only mention 1 person :(."
 	}
 
-	// This section really just deletes the user from the active_tracking slice
-	tState := tracking.StateInfo.Active_tracking
-	i := 0
-	for q, v := range tState {
-		if v == uid {
-			i = q
-		}
-	}
-	tState = append(tState[:i], tState[i+1:]...)
-
-
-	delete(tracking.CurrentlyTracking, uid)
-	tracking.SaveBotState(uid)	
+	bot.EndTrackingUser(uid)	
 
 	return "Successfully ended tracking for: " + uid
 }
@@ -88,19 +59,10 @@ func generate(input []string, m *discordgo.MessageCreate) string {
 		return "You have to/can only mention 1 person :(."
 	}
 
-	if _, ok := tracking.CurrentlyTracking[uid]; ok {
-		return "Stop being stupid Botond! Can't generate a sentence for a user that is actively being tracked >:("
-	}
-	userDict, err := os.Open(internal.GetAbsFile(fmt.Sprintf("data/%s.dict", uid)))
-	defer userDict.Close()
+	sentence, err := bot.GenerateSentenceForUser(uid)
 	if err != nil {
-		return "Stop being stupid Botond! You've never ever tracked this person!"
+		return err.Error()
 	}
-	dictBytes, _ := ioutil.ReadAll(userDict)
-
-
-	data := internal.FromGOB64(string(dictBytes))
-	sentence := strings.Title(strings.Join(data.Generate(), " "))
 	
 	return sentence + "."
 }
@@ -109,11 +71,10 @@ func generate(input []string, m *discordgo.MessageCreate) string {
 
 // Function that handles the request from a user to change the channel that is actively being tracked from
 func setChannel(input []string, m *discordgo.MessageCreate) string {
-	if !validate(input, m, 1, 0) {
+	if !validate(input, m, 0, 0) {
 		return "Invalid format >:("
 	}
-	channelID := m.ChannelID
-
-	tracking.StateInfo.Channel = channelID
-	return "Successfully changed channel to: " + channelID
+	chanelID := m.ChannelID
+	bot.SetTrackingChannel(chanelID)
+	return "Successfully changed channel to: " + chanelID
 }
