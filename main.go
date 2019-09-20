@@ -7,6 +7,11 @@ import(
 	"bendy-bot/internal/bot"
 	"github.com/bwmarrin/discordgo"
 	"regexp"
+	"io/ioutil"
+	"os"
+	"os/signal"
+	"syscall"
+	"fmt"
 )
 
 
@@ -14,19 +19,38 @@ var botID string
 
 func main() {
 	// Authenticate the client
-	authcode := internal.OpenFileFromStore("autcode.txt")
-	discord, err := discordgo.New("Bot " + string(authcode))
+	discord, err := discordgo.New("Bot " + getAuthCode())
 	if err != nil {
 		panic(err)
 	}
 	
 	// Set up the bot and the handlers
-	u, _ := discord.User("@me")
+	u, err := discord.User("@me")
+	if err != nil {
+		panic(err)
+	}
 	botID = u.ID
 	err = discord.Open()
 	discord.AddHandler(messageCreate)
+
+	// Keep the bot running
+	fmt.Println("Bot is now running...")
+	sc := make(chan os.Signal, 1)
+	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
+	<-sc
 	
 	defer discord.Close()
+}
+
+
+
+// Function to get the bot's oauth code
+func getAuthCode() string {
+	f, _ := os.Open(internal.GetAbsFile("authcode.txt"))
+	codeBytes, _ := ioutil.ReadAll(f)
+	defer f.Close()
+
+	return string(codeBytes)
 }
 
 

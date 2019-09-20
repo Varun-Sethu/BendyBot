@@ -15,46 +15,47 @@ import (
 
 
 type botStateInfo struct {
-	channel string
-	active_tracking []string
+	Channel string
+	Active_tracking []string
 }
 var stateInfo botStateInfo
-var currentlyTracking map[string]markov.Markov
+var currentlyTracking map[string]*markov.Markov
 
 
 
 func init() {
 	// Read the config files into these variables
-	jsonFile, _ := os.Open("stateinfo.json")
+	jsonFile, _ := os.Open(internal.GetAbsFile("stateinfo.json"))
 	defer jsonFile.Close()
 	bytes, _ := ioutil.ReadAll(jsonFile)
 
 	json.Unmarshal(bytes, &stateInfo)
 
+	currentlyTracking = make(map[string]*markov.Markov)
+
 	// Load up the data from the data storage for the users that are currently within the active_tracking section
-	for _, user := range stateInfo.active_tracking {
+	for _, user := range stateInfo.Active_tracking {
 		// Open the file the holds this users dictionary
-		dictBytes := internal.OpenFileFromStore(user)
-	
-		data := internal.FromGOB64(string(dictBytes))
-		currentlyTracking[user] = data
+		dictBytes := internal.OpenFileFromStore(user)	
+		currentlyTracking[user] = markov.Build(string(dictBytes))
 	}
 }
 
 
 
 // Function that just saves the current state of the bot and the specific user that must be saved
-func SaveBotState(user string) {
+func SaveBotState(user ...string) {
 	// if a user string is provided then save that user's state
-	if user != "" {
-		dataString := internal.ToGOB64(currentlyTracking[user])
-		userDict, _ := os.Open(internal.GetAbsFile(fmt.Sprintf("data/%s.dict", user)))
+	if len(user) == 1 {
+		dataString := internal.ToGOB64(*currentlyTracking[user[0]])
+		userDict, _ := os.Open(internal.GetAbsFile(fmt.Sprintf("data/%s.dict", user[0])))
 		defer userDict.Close()
 		ioutil.WriteFile(userDict.Name(), []byte(dataString), 0644)
 	}
 
 	// Save the current bot's state as well
 	botStateJson, _ := json.Marshal(stateInfo)
+	fmt.Print(string(botStateJson))
 	f, _ := os.Open(internal.GetAbsFile("stateinfo.json"))
 	defer f.Close()
 	ioutil.WriteFile(f.Name(), botStateJson, 0644)
@@ -64,11 +65,10 @@ func SaveBotState(user string) {
 
 // Also does what it says :P Handles and incoming message for storage
 func HandleIncomingMessage(m *discordgo.MessageCreate) {
-	if m.ChannelID == stateInfo.channel {
+	if m.ChannelID == stateInfo.Channel {
 		// Parse the message on to be tracked
 		if _, ok := currentlyTracking[m.Author.ID]; ok {
-			chain := currentlyTracking[m.Author.ID]
-			go chain.Parse(m.Content)
+			go currentlyTracking[m.Author.ID].Parse(m.Content)
 		}
 	}
 }
@@ -85,7 +85,7 @@ func BeginTrackingUser(uid string) error {
 	}
 
 	// Update the tracking state and read from their storage file
-	stateInfo.active_tracking = append(stateInfo.active_tracking, uid)
+	stateInfo.Active_tracking = append(stateInfo.Active_tracking, uid)
 	dictBytes := internal.OpenFileFromStore(uid)
 
 	if len(dictBytes) == 0 {
@@ -93,8 +93,7 @@ func BeginTrackingUser(uid string) error {
 		currentlyTracking[uid] = markov.Build()
 	} else {
 		// Interpret and parse their data
-		data := internal.FromGOB64(string(dictBytes))
-		currentlyTracking[uid] = data
+		currentlyTracking[uid] = markov.Build(string(dictBytes))
 	}
 	SaveBotState(uid)
 
@@ -106,7 +105,7 @@ func BeginTrackingUser(uid string) error {
 // Function to end the tracking of a specific user
 func EndTrackingUser(uid string) {
 	// This section really just deletes the user from the active_tracking slice
-	tState := stateInfo.active_tracking
+	tState := stateInfo.Active_tracking
 	i := 0
 	for q, v := range tState {
 		if v == uid {
@@ -145,6 +144,6 @@ func GenerateSentenceForUser(uid string) (string, error) {
 
 // Function to set the current tracking channel for a user
 func SetTrackingChannel(channelID string) {
-	stateInfo.channel = channelID
-	SaveBotState("")
+	stateInfo.Channel = channelID
+	SaveBotState()
 }
