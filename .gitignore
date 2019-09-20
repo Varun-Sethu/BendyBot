@@ -1,8 +1,0 @@
-data/*
-authcode.txt
-
-# vendor 
-vendor/*
-!vendor/vendor.json
-
-*.o
