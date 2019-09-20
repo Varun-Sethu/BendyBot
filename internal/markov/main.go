@@ -112,3 +112,13 @@ func (m *Markov) Parse(sentence string) {
 	// tie it to the end state so the generate function knows how to terminate
 	m.addEdge(*curr, &m.TerminalState)
 }
+
+
+
+
+
+// Function that turns the markov chain to json
+func (m *Markov) ToJSON() string {
+	json, _ := json.Marshal(m)
+	return string(json)
+}

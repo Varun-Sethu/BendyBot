@@ -47,7 +47,7 @@ func init() {
 func SaveBotState(user ...string) {
 	// if a user string is provided then save that user's state
 	if len(user) == 1 {
-		dataString := internal.ToGOB64(*currentlyTracking[user[0]])
+		dataString := currentlyTracking[user[0]].ToJSON()
 		userDict, _ := os.Open(internal.GetAbsFile(fmt.Sprintf("data/%s.dict", user[0])))
 		defer userDict.Close()
 		ioutil.WriteFile(userDict.Name(), []byte(dataString), 0644)
@@ -132,10 +132,9 @@ func GenerateSentenceForUser(uid string) (string, error) {
 		return "", errors.New("Stop being stupid Botond! You've never ever tracked this person!")
 	}
 	dictBytes, _ := ioutil.ReadAll(userDict)
-
-
-	data := internal.FromGOB64(string(dictBytes))
-	sentence := strings.Title(strings.Join(data.Generate(), " "))
+	// Attain the chain that is connected to that user
+	chain := markov.Build(string(dictBytes))
+	sentence := strings.Title(strings.Join(chain.Generate(), " "))
 
 	return sentence, nil
 }
