@@ -1,0 +1,8 @@
+data/*.json
+authcode.txt
+
+# vendor 
+vendor/*
+!vendor/vendor.json
+
+*.o
