@@ -1,4 +1,4 @@
-data/*.json
+data
 authcode.txt
 
 # vendor 
