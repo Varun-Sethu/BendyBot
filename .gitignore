@@ -1,5 +1,8 @@
-data/
+data/*
 authcode.txt
-vendor/github.com
-vendor/golang.org
+
+# vendor 
+vendor/*
+!vendor/vendor.json
+
 *.o
