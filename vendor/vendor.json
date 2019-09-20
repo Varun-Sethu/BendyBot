@@ -1,0 +1,43 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "Prn3HREeYpLagby1E5LSZotlOuQ=",
+			"path": "github.com/bwmarrin/discordgo",
+			"revision": "638303f174c7e5a3701386d2e06d37c257082888",
+			"revisionTime": "2019-08-26T20:53:29Z"
+		},
+		{
+			"checksumSHA1": "ajAqUByI39Sfm99F/ZNOguPP3Mk=",
+			"path": "github.com/gorilla/websocket",
+			"revision": "c3e18be99d19e6b3e8f1559eea2c161a665c4b6b",
+			"revisionTime": "2019-08-25T01:20:11Z"
+		},
+		{
+			"checksumSHA1": "/U7f2gaH6DnEmLguVLDbipU6kXU=",
+			"path": "golang.org/x/crypto/internal/subtle",
+			"revision": "227b76d455e791cb042b03e633e2f7fbcfdf74a5",
+			"revisionTime": "2019-09-11T02:06:19Z"
+		},
+		{
+			"checksumSHA1": "/D0Q9baFJAeXy2an6mwni/FJHzw=",
+			"path": "golang.org/x/crypto/nacl/secretbox",
+			"revision": "227b76d455e791cb042b03e633e2f7fbcfdf74a5",
+			"revisionTime": "2019-09-11T02:06:19Z"
+		},
+		{
+			"checksumSHA1": "vWXjCp+37T1tIpGO2ymEFmcaUpo=",
+			"path": "golang.org/x/crypto/poly1305",
+			"revision": "227b76d455e791cb042b03e633e2f7fbcfdf74a5",
+			"revisionTime": "2019-09-11T02:06:19Z"
+		},
+		{
+			"checksumSHA1": "yQNckVsxPX36aYbCk1ftg2w9ufw=",
+			"path": "golang.org/x/crypto/salsa20/salsa",
+			"revision": "227b76d455e791cb042b03e633e2f7fbcfdf74a5",
+			"revisionTime": "2019-09-11T02:06:19Z"
+		}
+	],
+	"rootPath": "bendy-bot"
+}
