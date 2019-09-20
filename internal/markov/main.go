@@ -16,7 +16,7 @@ type Markov struct {
 	InitState      string
 	TerminalState  string
 	Strings        []string
-	Edges          map[string][]*string
+	Edges          map[string][]string
 
 	// Mutex
 	mux 		   sync.Mutex
@@ -38,7 +38,7 @@ func Build(inp ...string) *Markov {
 		InitState: "INIT",
 		TerminalState: "TERMINAL",
 		Strings: []string{},
-		Edges: make(map[string][]*string),
+		Edges: make(map[string][]string),
 	}
 	return markov
 }
@@ -52,16 +52,16 @@ func init() {
 
 
 // Add node adds an additional state to the markov chain
-func (m *Markov) addState(s string) *string {
+func (m *Markov) addState(s string) string {
 	m.Strings = append(m.Strings, s)
-	return &m.Strings[len(m.Strings)-1]
+	return m.Strings[len(m.Strings)-1]
 }
 
 
 // Add edge adds a link between one state and another
-func (m *Markov) addEdge(i string, d *string) {
+func (m *Markov) addEdge(i string, d string) {
 	if _, ok := m.Edges[i]; !ok {
-		m.Edges[i] = []*string{}
+		m.Edges[i] = []string{}
 	}
 	m.Edges[i] = append(m.Edges[i], d)
 }
@@ -74,19 +74,19 @@ func (m *Markov) addEdge(i string, d *string) {
 // Function to generate an arbiatry sentence of words
 func (m *Markov) Generate() []string {
 	sentence := []string{}
-	currState := &m.InitState
+	currState := m.InitState
 
 	// continue adding words to the sentence while the current state is not a terminating state
-	for *currState != m.TerminalState && *currState != "." {
+	for currState != m.TerminalState && currState != "." {
 		// Attain the random state that will be the next word
-		nextStateIndex := rand.Intn(len(m.Edges[*currState]))
-		currState = m.Edges[*currState][nextStateIndex]
+		nextStateIndex := rand.Intn(len(m.Edges[currState]))
+		currState = m.Edges[currState][nextStateIndex]
 
-		sentence = append(sentence, *currState)
+		sentence = append(sentence, currState)
 	}
 
 	// Cut off the final "TERMINAL" text
-	return append(sentence[:len(sentence)-1], ".")
+	return sentence[:len(sentence)-1]
 }
 
 
@@ -99,18 +99,18 @@ func (m *Markov) Parse(sentence string) {
 	r := regexp.MustCompile(`[\w']+|[.,!?;]`)
 	words := r.FindAllString(sentence, -1)
 
-	curr := &m.InitState
+	curr := m.InitState
 	for _, word := range words {
 		// Generate a state to add to the chain
 		stringBlock := strings.ToLower(word)
 		newState := m.addState(stringBlock)
-		m.addEdge(*curr, newState)
+		m.addEdge(curr, newState)
 		
 		curr = newState
 	}
 
 	// tie it to the end state so the generate function knows how to terminate
-	m.addEdge(*curr, &m.TerminalState)
+	m.addEdge(curr, m.TerminalState)
 }
 
 

@@ -8,6 +8,7 @@ import (
 	"os"
 	"encoding/json"
 	"strings"
+	"regexp"
 	"fmt"
 	"errors"
 )
@@ -44,21 +45,21 @@ func init() {
 
 
 // Function that just saves the current state of the bot and the specific user that must be saved
-func SaveBotState(user ...string) {
-	// if a user string is provided then save that user's state
-	if len(user) == 1 {
-		dataString := currentlyTracking[user[0]].ToJSON()
-		userDict, _ := os.Open(internal.GetAbsFile(fmt.Sprintf("data/%s.dict", user[0])))
-		defer userDict.Close()
-		ioutil.WriteFile(userDict.Name(), []byte(dataString), 0644)
-	}
-
+func SaveBotState() {
 	// Save the current bot's state as well
 	botStateJson, _ := json.Marshal(stateInfo)
-	fmt.Print(string(botStateJson))
-	f, _ := os.Open(internal.GetAbsFile("stateinfo.json"))
-	defer f.Close()
-	ioutil.WriteFile(f.Name(), botStateJson, 0644)
+	err := ioutil.WriteFile(internal.GetAbsFile("stateinfo.json"), botStateJson, 0644)
+	if err != nil {
+		panic(err)
+	}
+}
+
+// Function to save the state of a user
+func SaveUserState(user string) {
+	dataString := currentlyTracking[user].ToJSON()
+	userDict, _ := os.Open(internal.GetAbsFile(fmt.Sprintf("data/%s.json", user)))
+	defer userDict.Close()
+	ioutil.WriteFile(userDict.Name(), []byte(dataString), 0644)
 }
 
 
@@ -95,7 +96,8 @@ func BeginTrackingUser(uid string) error {
 		// Interpret and parse their data
 		currentlyTracking[uid] = markov.Build(string(dictBytes))
 	}
-	SaveBotState(uid)
+	SaveBotState()
+	SaveUserState(uid)
 
 	return nil
 }
@@ -105,18 +107,17 @@ func BeginTrackingUser(uid string) error {
 // Function to end the tracking of a specific user
 func EndTrackingUser(uid string) {
 	// This section really just deletes the user from the active_tracking slice
-	tState := stateInfo.Active_tracking
 	i := 0
-	for q, v := range tState {
+	for q, v := range stateInfo.Active_tracking {
 		if v == uid {
 			i = q
 		}
 	}
-	tState = append(tState[:i], tState[i+1:]...)
+	stateInfo.Active_tracking = append(stateInfo.Active_tracking[:i], stateInfo.Active_tracking[i+1:]...)
 
-
+	SaveBotState()
+	SaveUserState(uid)
 	delete(currentlyTracking, uid)
-	SaveBotState(uid)
 }
 
 
@@ -126,7 +127,7 @@ func GenerateSentenceForUser(uid string) (string, error) {
 	if _, ok := currentlyTracking[uid]; ok {
 		return "", errors.New("Stop being stupid Botond! Can't generate a sentence for a user that is actively being tracked >:(")
 	}
-	userDict, err := os.Open(internal.GetAbsFile(fmt.Sprintf("data/%s.dict", uid)))
+	userDict, err := os.Open(internal.GetAbsFile(fmt.Sprintf("data/%s.json", uid)))
 	defer userDict.Close()
 	if err != nil {
 		return "", errors.New("Stop being stupid Botond! You've never ever tracked this person!")
@@ -134,7 +135,26 @@ func GenerateSentenceForUser(uid string) (string, error) {
 	dictBytes, _ := ioutil.ReadAll(userDict)
 	// Attain the chain that is connected to that user
 	chain := markov.Build(string(dictBytes))
-	sentence := strings.Title(strings.Join(chain.Generate(), " "))
+	words := chain.Generate()
+
+	// Create an actual sentence
+	words[0] = strings.Title(words[0])
+	sentence := ""
+
+	// Actually construct a sentnece with proper grammar
+	for i, word := range words {
+		// Determine if they are just punctuation or an actual word
+		if mathced, _ := regexp.Match(`[].,!?;]`, []byte(word)); mathced {
+			sentence = sentence + word
+		} else {
+			sentence = sentence + " " + word
+			// Add a full stop if necessary
+			if i == len(words) - 1 {
+				sentence = sentence + "."
+			}
+		}
+	}
+
 
 	return sentence, nil
 }

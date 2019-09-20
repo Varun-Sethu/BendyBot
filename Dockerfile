@@ -1,5 +1,7 @@
+# Attain based image
 FROM golang:latest
 
+# Setup govendor
 RUN go get github.com/kardianos/govendor
 
 WORKDIR /go/src/bendy-bot

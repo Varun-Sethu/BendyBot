@@ -64,7 +64,7 @@ func generate(input []string, m *discordgo.MessageCreate) string {
 		return err.Error()
 	}
 	
-	return sentence + "."
+	return sentence
 }
 
 
