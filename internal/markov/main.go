@@ -1,12 +1,12 @@
 package markov
 
 import (
+	"encoding/json"
 	"math/rand"
 	"regexp"
-	"sync"
 	"strings"
+	"sync"
 	"time"
-	"encoding/json"
 )
 
 
@@ -74,6 +74,11 @@ func (m *Markov) addEdge(i string, d string) {
 // Function to generate an arbiatry sentence of words
 func (m *Markov) Generate() []string {
 	sentence := []string{}
+	// edge case detection
+	if len(m.Strings) == 0 {
+		// edge case
+		return []string{"There", "is", "nothing", "for", "me", "to", "generate"}
+	}
 	currState := m.InitState
 
 	// continue adding words to the sentence while the current state is not a terminating state

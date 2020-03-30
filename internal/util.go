@@ -1,10 +1,10 @@
 package internal
 
 import (
-    "os"
-    "fmt"
-    "io/ioutil"
-    "go/build"
+	"fmt"
+	"go/build"
+	"io/ioutil"
+	"os"
 )
 
 

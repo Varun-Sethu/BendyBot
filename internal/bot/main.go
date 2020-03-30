@@ -1,23 +1,24 @@
 package bot
 
 import (
-	"io/ioutil"
-	"bendy-bot/internal/markov"
 	"bendy-bot/internal"
-	"github.com/bwmarrin/discordgo"
-	"os"
+	"bendy-bot/internal/markov"
 	"encoding/json"
-	"strings"
-	"regexp"
-	"fmt"
 	"errors"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"regexp"
+	"strings"
+
+	"github.com/bwmarrin/discordgo"
 )
 
 
 
 type botStateInfo struct {
-	Channel string
-	Active_tracking []string
+	Channel map[string]string
+	Active_tracking map[string][]string
 }
 var stateInfo botStateInfo
 var currentlyTracking map[string]*markov.Markov
@@ -35,10 +36,12 @@ func init() {
 	currentlyTracking = make(map[string]*markov.Markov)
 
 	// Load up the data from the data storage for the users that are currently within the active_tracking section
-	for _, user := range stateInfo.Active_tracking {
-		// Open the file the holds this users dictionary
-		dictBytes := internal.OpenFileFromStore(user)	
-		currentlyTracking[user] = markov.Build(string(dictBytes))
+	for server, _ := range stateInfo.Active_tracking {
+		for _, user := range stateInfo.Active_tracking[server] {
+			// Open the file the holds this users dictionary
+			dictBytes := internal.OpenFileFromStore(fmt.Sprintf("%s-%s", user, server))	
+			currentlyTracking[fmt.Sprintf("%s-%s", user, server)] = markov.Build(string(dictBytes))
+		}
 	}
 }
 
@@ -54,10 +57,10 @@ func SaveBotState() {
 	}
 }
 
-// Function to save the state of a user
-func SaveUserState(user string) {
-	dataString := currentlyTracking[user].ToJSON()
-	userDict, _ := os.Open(internal.GetAbsFile(fmt.Sprintf("data/%s.json", user)))
+// Function to save the state of a user, for privacy reasons a guild id must be provided and only that guild can access data from that id
+func SaveUserState(guildID string, user string) {
+	dataString := currentlyTracking[fmt.Sprintf("%s-%s", user, guildID)].ToJSON()
+	userDict, _ := os.Open(internal.GetAbsFile(fmt.Sprintf("data/%s-%s.json", user, guildID)))
 	defer userDict.Close()
 	ioutil.WriteFile(userDict.Name(), []byte(dataString), 0644)
 }
@@ -66,10 +69,10 @@ func SaveUserState(user string) {
 
 // Also does what it says :P Handles and incoming message for storage
 func HandleIncomingMessage(m *discordgo.MessageCreate) {
-	if m.ChannelID == stateInfo.Channel {
+	if m.ChannelID == stateInfo.Channel[m.GuildID] {
 		// Parse the message on to be tracked
-		if _, ok := currentlyTracking[m.Author.ID]; ok {
-			go currentlyTracking[m.Author.ID].Parse(m.Content)
+		if _, ok := currentlyTracking[fmt.Sprintf("%s-%s", m.Author.ID, m.GuildID)]; ok {
+			go currentlyTracking[fmt.Sprintf("%s-%s", m.Author.ID, m.GuildID)].Parse(m.Content)
 		}
 	}
 }
@@ -80,24 +83,24 @@ func HandleIncomingMessage(m *discordgo.MessageCreate) {
 
 // Utility functions that are used by the client and commands
 // BeginTrackingUser is a function that implements a tracker for a specific user
-func BeginTrackingUser(uid string) error {
-	if _, ok := currentlyTracking[uid]; ok {
+func BeginTrackingUser(guildID string, uid string) error {
+	if _, ok := currentlyTracking[fmt.Sprintf("%s-%s", uid, guildID)]; ok {
 		return errors.New("Stop being stupid Botond! User is already being tracked >:(")
 	}
 
 	// Update the tracking state and read from their storage file
-	stateInfo.Active_tracking = append(stateInfo.Active_tracking, uid)
-	dictBytes := internal.OpenFileFromStore(uid)
+	stateInfo.Active_tracking[guildID] = append(stateInfo.Active_tracking[guildID], uid)
+	dictBytes := internal.OpenFileFromStore(fmt.Sprintf("%s-%s", uid, guildID))
 
 	if len(dictBytes) == 0 {
 		// Build a new markov chain if nothing exists in storage for this user
-		currentlyTracking[uid] = markov.Build()
+		currentlyTracking[fmt.Sprintf("%s-%s", uid, guildID)] = markov.Build()
 	} else {
 		// Interpret and parse their data
-		currentlyTracking[uid] = markov.Build(string(dictBytes))
+		currentlyTracking[fmt.Sprintf("%s-%s", uid, guildID)] = markov.Build(string(dictBytes))
 	}
 	SaveBotState()
-	SaveUserState(uid)
+	SaveUserState(guildID, uid)
 
 	return nil
 }
@@ -105,29 +108,29 @@ func BeginTrackingUser(uid string) error {
 
 
 // Function to end the tracking of a specific user
-func EndTrackingUser(uid string) {
+func EndTrackingUser(guildID string, uid string) {
 	// This section really just deletes the user from the active_tracking slice
 	i := 0
-	for q, v := range stateInfo.Active_tracking {
+	for q, v := range stateInfo.Active_tracking[guildID] {
 		if v == uid {
 			i = q
 		}
 	}
-	stateInfo.Active_tracking = append(stateInfo.Active_tracking[:i], stateInfo.Active_tracking[i+1:]...)
+	stateInfo.Active_tracking[guildID] = append(stateInfo.Active_tracking[guildID][:i], stateInfo.Active_tracking[guildID][i+1:]...)
 
 	SaveBotState()
-	SaveUserState(uid)
-	delete(currentlyTracking, uid)
+	SaveUserState(guildID, uid)
+	delete(currentlyTracking, fmt.Sprintf("%s-%s", uid, guildID))
 }
 
 
 
 // Function to generate some text for an individual
-func GenerateSentenceForUser(uid string) (string, error) {
+func GenerateSentenceForUser(guildID string, uid string) (string, error) {
 	if _, ok := currentlyTracking[uid]; ok {
 		return "", errors.New("Stop being stupid Botond! Can't generate a sentence for a user that is actively being tracked >:(")
 	}
-	userDict, err := os.Open(internal.GetAbsFile(fmt.Sprintf("data/%s.json", uid)))
+	userDict, err := os.Open(internal.GetAbsFile(fmt.Sprintf("data/%s-%s.json", uid, guildID)))
 	defer userDict.Close()
 	if err != nil {
 		return "", errors.New("Stop being stupid Botond! You've never ever tracked this person!")
@@ -162,7 +165,7 @@ func GenerateSentenceForUser(uid string) (string, error) {
 
 
 // Function to set the current tracking channel for a user
-func SetTrackingChannel(channelID string) {
-	stateInfo.Channel = channelID
+func SetTrackingChannel(guildID string, channelID string) {
+	stateInfo.Channel[guildID] = channelID
 	SaveBotState()
 }

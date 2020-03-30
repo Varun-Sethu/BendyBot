@@ -2,6 +2,7 @@ package client
 
 import (
 	"bendy-bot/internal/bot"
+
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -23,12 +24,13 @@ func validate(input []string, m *discordgo.MessageCreate, inputs int, mentions i
 // function that handles a request from a user to begin the tracking of another user
 func track(input []string, m *discordgo.MessageCreate) string {
 	// Generate and pass user id + determine if the inputs are valid
-	uid := m.Mentions[0].ID
 	if !validate(input, m, 1, 1) {
 		return "You have to/can only mention 1 person :(."
 	}
+	uid := m.Mentions[0].ID
+	incomingGuildID := m.GuildID
 	
-	err := bot.BeginTrackingUser(uid)
+	err := bot.BeginTrackingUser(incomingGuildID, uid)
 	if err != nil {
 		return err.Error()
 	}
@@ -40,12 +42,13 @@ func track(input []string, m *discordgo.MessageCreate) string {
 
 // Function that handles a request from a user to end the tracking of another user
 func endtrack(input []string, m *discordgo.MessageCreate) string {
-	uid := m.Mentions[0].ID
 	if !validate(input, m, 1, 1) {
 		return "You have to/can only mention 1 person :(."
 	}
+	uid := m.Mentions[0].ID
+	incomingGuildRequest := m.GuildID
 
-	bot.EndTrackingUser(uid)	
+	bot.EndTrackingUser(incomingGuildRequest, uid)	
 
 	return "Successfully ended tracking for: " + uid
 }
@@ -54,12 +57,13 @@ func endtrack(input []string, m *discordgo.MessageCreate) string {
 
 // Function that handles the request to generate a sentence from another user's markov chain
 func generate(input []string, m *discordgo.MessageCreate) string {
-	uid := m.Mentions[0].ID
 	if !validate(input, m, 1, 1) {
 		return "You have to/can only mention 1 person :(."
 	}
+	uid := m.Mentions[0].ID
+	requestedGuildID := m.GuildID
 
-	sentence, err := bot.GenerateSentenceForUser(uid)
+	sentence, err := bot.GenerateSentenceForUser(requestedGuildID, uid)
 	if err != nil {
 		return err.Error()
 	}
@@ -75,6 +79,7 @@ func setChannel(input []string, m *discordgo.MessageCreate) string {
 		return "Invalid format >:("
 	}
 	chanelID := m.ChannelID
-	bot.SetTrackingChannel(chanelID)
+	guildID := m.GuildID
+	bot.SetTrackingChannel(guildID, chanelID)
 	return "Successfully changed channel to: " + chanelID
 }

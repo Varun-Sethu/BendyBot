@@ -1,17 +1,18 @@
 package main
 
-import(
+import (
 	"bendy-bot/internal"
-	_"bendy-bot/internal/markov"
-	"bendy-bot/internal/client"
 	"bendy-bot/internal/bot"
-	"github.com/bwmarrin/discordgo"
-	"regexp"
+	"bendy-bot/internal/client"
+	_ "bendy-bot/internal/markov"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/signal"
+	"regexp"
 	"syscall"
-	"fmt"
+
+	"github.com/bwmarrin/discordgo"
 )
 
 
