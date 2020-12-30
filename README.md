@@ -1,6 +1,6 @@
 # Bendy Bot
 
-Just some weird discord bot designed to track people's messages and generate random sentences. 
+A relatively simple discord bot designed to track people's messages and generate random sentences. 
 
 ### Usage
 To use Bendy Bot make sure you have an active bot registered with Discord, this can be done through their website. Attain the authentication token for your both and execute the following command in the home directory:
